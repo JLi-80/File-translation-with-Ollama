@@ -1,0 +1,16 @@
+{
+    "ollama": {
+        "url": "http://localhost:11434/api/generate",
+        "model_name": "qwen3:4b-instruct-2507-q8_0",
+        "temperature": 0.1,
+        "top_p": 0.9,
+        "repeat_penalty": 1.2,
+        "timeout": 240,
+        "retries": 3
+    },
+    "translation": {
+        "target_tokens_per_slice": 512,
+        "system_prompt": "You are a professional translator. Translate the following English text into natural, fluent simplified Chinese. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the Chinese translation, do not include any thinking/reasoning, explanation or note.",
+        "para_sep": "<段落分隔符>"
+    }
+} 
