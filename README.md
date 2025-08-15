@@ -1,6 +1,6 @@
 # Ollama 翻译器
 
-这是一个使用本地 Ollama 模型将英文文本翻译为中文的工具。
+这是一个使用本地 Ollama 模型将文本翻译为指定语言的工具。
 
 ## 配置文件
 
@@ -21,7 +21,8 @@
     },
     "translation": {
         "target_tokens_per_slice": 512,
-        "system_prompt": "You are a professional translator...",
+        "target_language": "simplified Chinese",
+        "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
         "para_sep": "<段落分隔符>"
     }
 }
@@ -39,8 +40,16 @@
 - `retries`: 翻译失败重试次数
 
 #### 翻译设置
-- `target_tokens_per_slice`: 每个分片的目标最大 token 数
-- `system_prompt`: 翻译系统提示词
+- `target_tokens_per_slice`: 每个分片的目标最大 token 数。过大的token数导致更大的运算开销，并可能导致每分片返回翻译结果不完整；更小的token数可能导致翻译结果碎片化。
+- `target_language`: **翻译目标语言**。用户可以通过修改此参数来指定翻译的目标语言，例如：
+  - `"simplified Chinese"` - 简体中文（默认）
+  - `"English"` - 英文
+  - `"Japanese"` - 日文
+  - `"Korean"` - 韩文
+  - `"French"` - 法文
+  - `"German"` - 德文
+  - 等等...
+- `system_prompt`: 翻译系统提示词。支持使用 `{target_language}` 占位符，程序会自动将其替换为实际的目标语言。
 - `para_sep`: 段落分隔符，用于在翻译时保持段落结构
 
 ### 使用方法
@@ -52,8 +61,43 @@
    python translate_with_ollama.py input.txt
    ```
 
+### 多语言翻译示例
+
+要翻译为不同语言，只需修改 `settings.json` 中的 `target_language` 参数：
+
+**翻译为英文：**
+```json
+{
+    "translation": {
+        "target_language": "English",
+        // ... 其他设置
+    }
+}
+```
+
+**翻译为日文：**
+```json
+{
+    "translation": {
+        "target_language": "Japanese",
+        // ... 其他设置
+    }
+}
+```
+
+**翻译为法文：**
+```json
+{
+    "translation": {
+        "target_language": "French",
+        // ... 其他设置
+    }
+}
+```
+
 ### 注意事项
 
 - 如果 `settings.json` 文件不存在或读取失败，程序将使用默认配置
 - 修改配置文件后无需重启程序，每次运行都会重新加载配置
-- 建议根据使用的模型调整 `temperature` 和 `top_p` 参数以获得最佳翻译效果 
+- 建议根据使用的模型调整 `temperature` 和 `top_p` 参数以获得最佳翻译效果
+- `target_language` 参数会影响 `system_prompt` 中的占位符替换，确保翻译指令与目标语言一致

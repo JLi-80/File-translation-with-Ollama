@@ -9,8 +9,9 @@
         "retries": 3
     },
     "translation": {
-        "target_tokens_per_slice": 512,
-        "system_prompt": "You are a professional translator. Translate the following English text into natural, fluent simplified Chinese. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the Chinese translation, do not include any thinking/reasoning, explanation or note.",
+        "target_tokens_per_slice": 1024,
+        "target_language": "simplified Chinese",
+        "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
         "para_sep": "<段落分隔符>"
     }
-} 
+}

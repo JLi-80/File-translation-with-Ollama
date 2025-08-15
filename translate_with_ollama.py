@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 translate_with_ollama.py
-将英文 txt / md 文本按句子边界切成约512 token 的片段，
+将英文 txt / md 文本按句子边界切成约1024 token 的片段，
 调用本地 ollama (http://localhost:11434) 翻译为中文后合并输出。
 """
 
@@ -9,21 +9,15 @@ import argparse
 import os
 import sys
 import time
-import re
 import subprocess
 import json
 from pathlib import Path
 
 import requests
-import nltk
-from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
 
-# 首次运行需下载 punkt 分句模型
-try:
-    nltk.data.find("tokenizers/punkt")    # 检查 punkt 分句模型是否已下载
-except LookupError:
-    nltk.download("punkt")                 # 若未下载则自动下载
+# 导入文字切片处理模块
+from text_slicer import TextSlicer, count_tokens, join_paragraphs_with_separator, split_by_separator
 
 def load_settings():
     """
@@ -51,26 +45,25 @@ def load_settings():
             "retries": 3
         },
         "translation": {
-            "target_tokens_per_slice": 512,
-            "system_prompt": "You are a professional translator. Translate the following English text into natural, fluent simplified Chinese. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the Chinese translation, do not include any thinking/reasoning, explanation or note.",
+            "target_tokens_per_slice": 1024,
+            "target_language": "simplified Chinese",
+            "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
             "para_sep": "<段落分隔符>"
         }
     }
+
+def get_system_prompt():
+    """
+    获取处理后的 system prompt，将占位符替换为实际的目标语言
+    """
+    system_prompt = SETTINGS["translation"]["system_prompt"]
+    target_language = SETTINGS["translation"]["target_language"]
+    return system_prompt.format(target_language=target_language)
 
 # 加载配置
 SETTINGS = load_settings()
 
 # ------------------------------------------------------------------ #
-# 工具：粗略估算 token 数（对英文文本足够）
-def count_tokens(text: str) -> int:
-    """
-    粗略估算文本的 token 数。
-    以 utf-8 编码后每 4 字节算作 1 token。
-    适用于英文文本的近似估算。
-    """
-    return len(text.encode("utf-8")) // 4
-
-
 # 重启 ollama（未启用，保留作参考）
 """
 def restart_ollama():
@@ -95,7 +88,7 @@ def translate_segment(segment: str, retries: int = None) -> tuple[str, list]:
     
     payload = {
         "model": SETTINGS["ollama"]["model_name"],
-        "system": SETTINGS["translation"]["system_prompt"],
+        "system": get_system_prompt(),
         "prompt": segment,
         "stream": False,
         "options": {
@@ -118,92 +111,19 @@ def translate_segment(segment: str, retries: int = None) -> tuple[str, list]:
             time.sleep(2 ** attempt)
     return "", []
 
-
-# ------------------------------------------------------------------ #
-# 新的分段合并切片逻辑
-
-def group_paragraphs(paragraphs, max_tokens=None):
-    """
-    合并多个短段为一组，长段单独为一组，返回 [[para1, para2, ...], ...]
-    参数：
-        paragraphs: 段落列表
-        max_tokens: 每组最大 token 数，如果为None则使用配置文件中的值
-    返回：
-        分组后的段落列表，每组为一个 list
-    """
-    if max_tokens is None:
-        max_tokens = SETTINGS["translation"]["target_tokens_per_slice"]
-    
-    groups = []
-    current = []
-    current_len = 0
-    for para in paragraphs:
-        para = para.strip()
-        if not para:
-            # 空段落直接单独成组
-            if current:
-                groups.append(current)
-                current = []
-                current_len = 0
-            groups.append([""])
-            continue
-        para_len = count_tokens(para)
-        if para_len > max_tokens:
-            # 长段落单独成组
-            if current:
-                groups.append(current)
-                current = []
-                current_len = 0
-            groups.append([para])
-            continue
-        if current_len + para_len > max_tokens and current:
-            groups.append(current)
-            current = []
-            current_len = 0
-        current.append(para)
-        current_len += para_len
-    if current:
-        groups.append(current)
-    return groups
-
 def process_empty_group(output_file):
     """
     处理空段落组，直接写入两个换行符。
     """
     output_file.write("\n\n")
 
-def process_long_paragraph(group, output_file):
+def process_long_paragraph_slices(slices, output_file):
     """
-    处理超长段落：按句子切片，每片不超过目标 token 数，分别翻译后合并。
+    处理长段落切片：分别翻译每个切片后合并。
     参数：
-        group: 仅含一个长段落的列表
+        slices: 长段落切片列表
         output_file: 输出文件对象
     """
-    para = group[0]
-    target_tokens = SETTINGS["translation"]["target_tokens_per_slice"]
-    # 按句切片
-    sentences = sent_tokenize(para)
-    slices = []
-    current = []
-    current_len = 0
-    for sent in sentences:
-        sent_len = count_tokens(sent)
-        if sent_len > target_tokens:
-            # 超长句单独成片
-            if current:
-                slices.append(" ".join(current))
-                current = []
-                current_len = 0
-            slices.append(sent)
-            continue
-        if current_len + sent_len > target_tokens and current:
-            slices.append(" ".join(current))
-            current = []
-            current_len = 0
-        current.append(sent)
-        current_len += sent_len
-    if current:
-        slices.append(" ".join(current))
     translated = ""
     for seg in slices:
         t, _ = translate_segment(seg)
@@ -218,10 +138,10 @@ def process_normal_group(group, output_file):
         output_file: 输出文件对象
     """
     para_sep = SETTINGS["translation"]["para_sep"]
-    joined = f"\n{para_sep}\n".join(group)
+    joined = join_paragraphs_with_separator(group, para_sep)
     translated, _ = translate_segment(joined)
     # 按分隔符拆分
-    translated_paragraphs = [p.strip() for p in translated.split(para_sep)]
+    translated_paragraphs = split_by_separator(translated, para_sep)
     for para in translated_paragraphs:
         output_file.write(para + "\n\n")
 
@@ -229,11 +149,11 @@ def main():
     """
     主程序入口：
     1. 解析命令行参数，读取输入文件。
-    2. 按段落分割并分组。
+    2. 使用TextSlicer进行文本切片处理。
     3. 逐组翻译并写入输出文件。
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_file", help="英文 txt / md 文件路径")
+    parser.add_argument("input_file", help="英文 txt/html/md 文件路径")
     args = parser.parse_args()
 
     src_path = Path(args.input_file).expanduser().resolve()
@@ -245,21 +165,27 @@ def main():
     # 读取原文
     text = src_path.read_text(encoding="utf-8")
 
-    # 按段落分割
-    paragraphs = re.split(r'\n\s*\n', text)
-    groups = group_paragraphs(paragraphs)
-    print(f"共分组 {len(groups)} 组")
+    # 创建文本切片器
+    slicer = TextSlicer(
+        target_tokens=SETTINGS["translation"]["target_tokens_per_slice"],
+        para_separator=SETTINGS["translation"]["para_sep"]
+    )
+    
+    # 处理文本切片
+    slices = slicer.process_text(text)
+    print(f"共生成 {len(slices)} 个切片")
 
     # 翻译并边写入
     with out_path.open("w", encoding="utf-8") as output_file:
-        for group in tqdm(groups, desc="Translating", unit="group"):
-            if all(not para.strip() for para in group):
+        for slice_info in tqdm(slices, desc="Translating", unit="slice"):
+            if slice_info['type'] == 'empty':
                 process_empty_group(output_file)
-                continue
-            if len(group) == 1 and count_tokens(group[0]) > SETTINGS["translation"]["target_tokens_per_slice"]:
-                process_long_paragraph(group, output_file)
-                continue
-            process_normal_group(group, output_file)
+            elif slice_info['type'] == 'long_paragraph_slice':
+                # 长段落切片直接翻译
+                translated, _ = translate_segment(slice_info['content'])
+                output_file.write(translated.strip() + "\n\n")
+            elif slice_info['type'] == 'normal':
+                process_normal_group(slice_info['content'], output_file)
     print(f"翻译完成，已保存为: {out_path}")
 
 
