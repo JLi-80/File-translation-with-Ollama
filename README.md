@@ -61,6 +61,24 @@
    python translate_with_ollama.py input.txt
    ```
 
+## 支持的输入文件类型
+
+程序按 UTF-8 文本整体读取，不做扩展名硬限制。常见可直接处理（推荐）的纯文本与轻量标记格式：
+
+- 文本与轻量标记
+  - txt
+  - html / htm / xhtml
+  - md / markdown
+  - rst（reStructuredText）
+  - tex / latex
+  - adoc（AsciiDoc）
+  - xml（如 DocBook、XHTML 等）
+- 字幕
+  - srt / vtt（按段落块处理并保持块顺序）
+
+可用但需谨慎（可能破坏结构或键名/值）：csv / tsv、yaml / yml、ini / conf / properties、json  
+不支持：doc / docx / pdf 等二进制文档（请先导出为纯文本或 Markdown）
+
 ### 多语言翻译示例
 
 要翻译为不同语言，只需修改 `settings.json` 中的 `target_language` 参数：

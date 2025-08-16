@@ -1,8 +1,21 @@
 #!/usr/bin/env python3
 """
 translate_with_ollama.py
-将英文 txt / md 文本按句子边界切成约1024 token 的片段，
+将 UTF-8 文本按句子边界切成约1024 token 的片段，
 调用本地 ollama (http://localhost:11434) 翻译为中文后合并输出。
+
+支持的输入类型（需为 UTF-8 纯文本）：
+- txt
+- html / htm / xhtml
+- md / markdown
+- rst（reStructuredText）
+- tex / latex
+- adoc（AsciiDoc）
+- xml（如 DocBook、XHTML 等）
+- srt / vtt（字幕，保持段落块顺序）
+
+可用但需谨慎（可能破坏结构或键名）：csv / tsv、yaml / yml、ini / conf / properties、json
+不支持：doc/docx/pdf 等二进制文档（请先导出为纯文本或 Markdown）
 """
 
 import argparse
@@ -78,7 +91,7 @@ def translate_segment(segment: str, retries: int = None) -> tuple[str, list]:
     """
     调用本地 Ollama API 翻译指定文本片段。
     参数：
-        segment: 需要翻译的英文文本片段
+        segment: 需要翻译的文本片段
         retries: 失败重试次数，如果为None则使用配置文件中的值
     返回：
         (翻译后的中文文本, 上下文信息)
@@ -153,7 +166,10 @@ def main():
     3. 逐组翻译并写入输出文件。
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_file", help="英文 txt/html/md 文件路径")
+    parser.add_argument(
+        "input_file",
+        help="待翻译的UTF-8 文本文件路径（txt/html/htm/xhtml/md/markdown/rst/tex/latex/adoc/xml/srt/vtt 等）"
+    )
     args = parser.parse_args()
 
     src_path = Path(args.input_file).expanduser().resolve()
