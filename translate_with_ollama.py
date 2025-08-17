@@ -2,7 +2,7 @@
 """
 translate_with_ollama.py
 将 UTF-8 文本按句子边界切成约1024 token 的片段，
-调用本地 ollama (http://localhost:11434) 翻译为中文后合并输出。
+调用本地 ollama (http://localhost:11434) 翻译为指定语言后合并输出。
 
 支持的输入类型（需为 UTF-8 纯文本）：
 - txt
@@ -26,11 +26,19 @@ import subprocess
 import json
 from pathlib import Path
 
-import requests
 from tqdm import tqdm
 
 # 导入文字切片处理模块
 from text_slicer import TextSlicer, count_tokens, join_paragraphs_with_separator, split_by_separator
+# 导入Ollama客户端模块
+from ollama_client import create_ollama_client, load_ollama_config, OllamaClientError, OllamaServiceError
+
+default_translation_settings={
+    "target_tokens_per_slice": 1024,
+    "target_language": "simplified Chinese",
+    "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, including HTML/markdown/latex tags such as <table>, <figure>, <equation>, <reference>, etc. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
+    "para_sep": "<段落分隔符>"
+}
 
 def load_settings():
     """
@@ -41,28 +49,24 @@ def load_settings():
     if settings_path.exists():
         try:
             with open(settings_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f)
+                # 确保配置包含所有必要的部分
+                if "ollama" not in config:
+                    config["ollama"] = load_ollama_config(settings_path)
+                if "translation" not in config:
+                    config["translation"] = default_translation_settings
+                if "general" not in config:
+                    config["general"] = {"skip_connection_test": False}
+                return config
         except (json.JSONDecodeError, IOError) as e:
             print(f"警告: 无法读取配置文件 {settings_path}: {e}", file=sys.stderr)
             print("使用默认配置", file=sys.stderr)
     
     # 默认配置
     return {
-        "ollama": {
-            "url": "http://localhost:11434/api/generate",
-            "model_name": "gemma3:latest",
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "repeat_penalty": 1.2,
-            "timeout": 240,
-            "retries": 3
-        },
-        "translation": {
-            "target_tokens_per_slice": 1024,
-            "target_language": "simplified Chinese",
-            "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, such as HTML/markdown/latex tags. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
-            "para_sep": "<段落分隔符>"
-        }
+        "ollama": load_ollama_config(settings_path),
+        "translation": default_translation_settings,
+        "general": {"skip_connection_test": False}
     }
 
 def get_system_prompt():
@@ -76,15 +80,10 @@ def get_system_prompt():
 # 加载配置
 SETTINGS = load_settings()
 
+# 创建Ollama客户端实例
+OLLAMA_CLIENT = create_ollama_client(SETTINGS["ollama"])
+
 # ------------------------------------------------------------------ #
-# 重启 ollama（未启用，保留作参考）
-"""
-def restart_ollama():
-      subprocess.run('ollama stop', shell=True)
-      time.sleep(2)
-      subprocess.Popen('start /B ollama serve', shell=True)
-      time.sleep(10)  # 等待服务启动
-"""
 
 # 调用 ollama 进行翻译
 def translate_segment(segment: str, retries: int = None) -> tuple[str, list]:
@@ -94,35 +93,13 @@ def translate_segment(segment: str, retries: int = None) -> tuple[str, list]:
         segment: 需要翻译的文本片段
         retries: 失败重试次数，如果为None则使用配置文件中的值
     返回：
-        (翻译后的中文文本, 上下文信息)
+        (翻译后的文本, 上下文信息)
     """
-    if retries is None:
-        retries = SETTINGS["ollama"]["retries"]
-    
-    payload = {
-        "model": SETTINGS["ollama"]["model_name"],
-        "system": get_system_prompt(),
-        "prompt": segment,
-        "stream": False,
-        "options": {
-            "temperature": SETTINGS["ollama"]["temperature"], 
-            "top_p": SETTINGS["ollama"]["top_p"], 
-            "repeat_penalty": SETTINGS["ollama"]["repeat_penalty"]
-        },
-    }
-
-    for attempt in range(1, retries + 1):
-        try:
-            resp = requests.post(SETTINGS["ollama"]["url"], json=payload, timeout=SETTINGS["ollama"]["timeout"])
-            resp.raise_for_status()
-            json_resp = resp.json()
-            return json_resp["response"].strip(), json_resp.get("context", [])
-        except Exception as e:
-            print(f"[WARN] attempt {attempt} failed: {e}", file=sys.stderr)
-            if attempt == retries:
-                raise
-            time.sleep(2 ** attempt)
-    return "", []
+    try:
+        return OLLAMA_CLIENT.translate(segment, get_system_prompt(), retries)
+    except OllamaClientError as e:
+        print(f"[ERROR] 翻译失败: {e}", file=sys.stderr)
+        raise
 
 def process_empty_group(output_file):
     """
@@ -162,21 +139,30 @@ def main():
     """
     主程序入口：
     1. 解析命令行参数，读取输入文件。
-    2. 使用TextSlicer进行文本切片处理。
-    3. 逐组翻译并写入输出文件。
+    2. 测试Ollama连接。
+    3. 使用TextSlicer进行文本切片处理。
+    4. 逐组翻译并写入输出文件。
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "input_file",
         help="待翻译的UTF-8 文本文件路径（txt/html/htm/xhtml/md/markdown/rst/tex/latex/adoc/xml/srt/vtt 等）"
     )
+
     args = parser.parse_args()
 
     src_path = Path(args.input_file).expanduser().resolve()
     if not src_path.exists():
         sys.exit(f"文件不存在: {src_path}")
 
-    out_path = src_path.with_stem(src_path.stem + "-chn")
+    out_path = src_path.with_stem(src_path.stem + "-translated")
+
+    # 测试Ollama连接
+    if not SETTINGS["general"]["skip_connection_test"]:
+        print("测试Ollama连接...")
+        if not OLLAMA_CLIENT.test_connection():
+            sys.exit("错误: 无法连接到Ollama服务。请确保Ollama正在运行。")
+        print("Ollama连接测试通过")
 
     # 读取原文
     text = src_path.read_text(encoding="utf-8")
@@ -194,14 +180,20 @@ def main():
     # 翻译并边写入
     with out_path.open("w", encoding="utf-8") as output_file:
         for slice_info in tqdm(slices, desc="Translating", unit="slice"):
-            if slice_info['type'] == 'empty':
-                process_empty_group(output_file)
-            elif slice_info['type'] == 'long_paragraph_slice':
-                # 长段落切片直接翻译
-                translated, _ = translate_segment(slice_info['content'])
-                output_file.write(translated.strip() + "\n\n")
-            elif slice_info['type'] == 'normal':
-                process_normal_group(slice_info['content'], output_file)
+            try:
+                if slice_info['type'] == 'empty':
+                    process_empty_group(output_file)
+                elif slice_info['type'] == 'long_paragraph_slice':
+                    # 长段落切片直接翻译
+                    translated, _ = translate_segment(slice_info['content'])
+                    output_file.write(translated.strip() + "\n\n")
+                elif slice_info['type'] == 'normal':
+                    process_normal_group(slice_info['content'], output_file)
+            except OllamaClientError as e:
+                print(f"\n[ERROR] 翻译切片失败: {e}", file=sys.stderr)
+                print(f"切片内容: {slice_info['content'][:100]}...", file=sys.stderr)
+                sys.exit(1)
+    
     print(f"翻译完成，已保存为: {out_path}")
 
 
