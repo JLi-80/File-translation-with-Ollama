@@ -9,6 +9,7 @@ ollama_translator/
 ├── translate_with_ollama.py  # 主程序入口
 ├── ollama_client.py          # Ollama API客户端模块
 ├── text_slicer.py            # 文本切片处理模块
+├── gui.py                    # 图形用户界面
 ├── test_ollama_client.py     # 客户端模块测试脚本
 ├── example_usage.py          # 使用示例脚本
 ├── settings.json             # 配置文件
@@ -21,6 +22,7 @@ ollama_translator/
 - **`translate_with_ollama.py`**: 主程序，负责文件处理、文本切片和翻译流程控制
 - **`ollama_client.py`**: 独立的Ollama API客户端模块，负责与Ollama服务的通讯交互和异常处理
 - **`text_slicer.py`**: 文本切片处理模块，负责将长文本分割为适合翻译的片段
+- **`gui.py`**: 图形用户界面，提供直观易用的GUI来配置参数和执行翻译任务
 - **`test_ollama_client.py`**: 测试脚本，用于验证Ollama客户端模块的功能
 - **`example_usage.py`**: 使用示例脚本，展示如何使用Ollama客户端模块
 - **`REFACTORING_SUMMARY.md`**: 重构总结文档，记录了项目的重构过程和架构改进详情
@@ -184,6 +186,68 @@ python example_usage.py
 - 错误处理示例：展示如何处理连接错误和异常情况
 
 运行示例脚本可以快速了解如何使用Ollama客户端模块的各种功能。示例脚本提供了完整的使用场景，可以作为开发参考。建议新用户先运行示例脚本了解基本用法。示例脚本中的代码可以直接复制和修改使用。示例脚本会展示如何创建客户端、进行翻译、处理错误等操作。示例脚本是学习和理解系统功能的最佳方式。示例脚本包含了实际的使用场景和最佳实践。
+
+## Usage
+
+```
+python translate_with_ollama.py input.txt
+```
+
+The translated file will be saved as `input-translated.txt` in the same directory.
+
+For advanced usage, see [example_usage.py](example_usage.py) and [translate_with_ollama.py](translate_with_ollama.py).
+
+### GUI Application
+
+A graphical user interface is also available for easier use. To run the GUI:
+
+1. First install the required GUI package:
+   ```bash
+   pip install customtkinter
+   ```
+
+2. Run the GUI application:
+   ```bash
+   python gui.py
+   ```
+
+#### GUI Features
+
+The GUI provides a user-friendly interface with the following features:
+
+- **File Selection**: Easily browse and select files to translate using the file dialog
+- **Settings Management**: Modify all configuration parameters through an intuitive tabbed interface:
+  - Ollama Settings: Configure API URL, model name, temperature, and other model parameters
+  - Translation Settings: Set target language, tokens per slice, and system prompt
+  - General Settings: Control connection test behavior
+- **Real-time Progress Tracking**: Visual progress bar and detailed log output show translation progress in real-time
+- **One-click Translation**: Start the translation process with a single button click
+- **Log Monitoring**: View detailed progress information and error messages in the log area
+
+#### Using the GUI
+
+1. **Select a File**: Click the "Browse" button to select a file for translation. The output file path will be automatically generated.
+
+2. **Configure Settings**: Use the tabbed interface to adjust settings:
+   - In the "Ollama Settings" tab, you can modify the API URL, model name, and other parameters
+   - In the "Translation Settings" tab, you can change the target language and other translation parameters
+   - In the "General Settings" tab, you can control whether to skip the connection test
+
+3. **Save Settings**: Click "Save Settings" to save your configuration to the `settings.json` file
+
+4. **Start Translation**: Click the "Translate" button to begin the translation process
+
+5. **Monitor Progress**: Watch the progress bar and log area for real-time updates during translation
+
+6. **View Results**: Once translation is complete, the output file will be saved in the same directory as the input file with "-translated" appended to the filename
+
+#### GUI Benefits
+
+- **User-friendly Interface**: No need to remember command-line arguments or manually edit configuration files
+- **Real-time Feedback**: Visual progress bar and log output provide immediate feedback on translation progress
+- **Easy Configuration**: All settings are accessible through a graphical interface
+- **Error Handling**: Clear error messages help diagnose and resolve issues
+- **Cross-platform**: Works on Windows, macOS, and Linux
 
 ## 支持的输入文件类型
 

@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
 translate_with_ollama.py
-将 UTF-8 文本按句子边界切成约1024 token 的片段，
-调用本地 ollama (http://localhost:11434) 翻译为指定语言后合并输出。
+Split UTF-8 text into approximately 1024 token segments by sentence boundaries,
+call the local ollama (http://localhost:11434) to translate into the specified language, and merge the output after translation.
 
-支持的输入类型（需为 UTF-8 纯文本）：
+Supported input types (must be UTF-8 plain text):
 - txt
 - html / htm / xhtml
 - md / markdown
-- rst（reStructuredText）
+- rst (reStructuredText)
 - tex / latex
-- adoc（AsciiDoc）
-- xml（如 DocBook、XHTML 等）
-- srt / vtt（字幕，保持段落块顺序）
+- adoc (AsciiDoc)
+- xml (such as DocBook, XHTML, etc.)
+- srt / vtt (subtitles, maintaining paragraph block order)
 
-可用但需谨慎（可能破坏结构或键名）：csv / tsv、yaml / yml、ini / conf / properties、json
-不支持：doc/docx/pdf 等二进制文档（请先导出为纯文本或 Markdown）
+Available but use with caution (may break structure or key names): csv / tsv, yaml / yml, ini / conf / properties, json
+Not supported: binary documents such as doc/docx/pdf (please export to plain text or Markdown first)
 """
 
 import argparse
@@ -25,8 +25,6 @@ import time
 import subprocess
 import json
 from pathlib import Path
-
-from tqdm import tqdm
 
 # 导入文字切片处理模块
 from text_slicer import TextSlicer, count_tokens, join_paragraphs_with_separator, split_by_separator
@@ -153,16 +151,16 @@ def main():
 
     src_path = Path(args.input_file).expanduser().resolve()
     if not src_path.exists():
-        sys.exit(f"文件不存在: {src_path}")
+        sys.exit(f"File does not exist: {src_path}")
 
     out_path = src_path.with_stem(src_path.stem + "-translated")
 
     # 测试Ollama连接
     if not SETTINGS["general"]["skip_connection_test"]:
-        print("测试Ollama连接...")
+        print("Testing Ollama connection...", file=sys.stderr)
         if not OLLAMA_CLIENT.test_connection():
-            sys.exit("错误: 无法连接到Ollama服务。请确保Ollama正在运行。")
-        print("Ollama连接测试通过")
+            sys.exit("Error: Cannot connect to Ollama service. Please ensure Ollama is running.")
+        print("Ollama connection test passed", file=sys.stderr)
 
     # 读取原文
     text = src_path.read_text(encoding="utf-8")
@@ -175,11 +173,17 @@ def main():
     
     # 处理文本切片
     slices = slicer.process_text(text)
-    print(f"共生成 {len(slices)} 个切片")
+    print(f"Generated {len(slices)} slices", file=sys.stderr)
 
     # 翻译并边写入
     with out_path.open("w", encoding="utf-8") as output_file:
-        for slice_info in tqdm(slices, desc="Translating", unit="slice"):
+        total_slices = len(slices)
+        for i, slice_info in enumerate(slices):
+            # Report progress BEFORE translating the slice
+            progress = int(i * 100 / total_slices) if total_slices > 0 else 0
+            progress_msg = f"Translating: {progress}% complete ({i}/{total_slices} slices)"
+            print(progress_msg, file=sys.stderr)
+            
             try:
                 if slice_info['type'] == 'empty':
                     process_empty_group(output_file)
@@ -190,11 +194,16 @@ def main():
                 elif slice_info['type'] == 'normal':
                     process_normal_group(slice_info['content'], output_file)
             except OllamaClientError as e:
-                print(f"\n[ERROR] 翻译切片失败: {e}", file=sys.stderr)
-                print(f"切片内容: {slice_info['content'][:100]}...", file=sys.stderr)
+                print(f"\n[ERROR] Failed to translate slice: {e}", file=sys.stderr)
+                print(f"Slice content: {slice_info['content'][:100]}...", file=sys.stderr)
                 sys.exit(1)
-    
-    print(f"翻译完成，已保存为: {out_path}")
+        
+        # Report final progress (100%)
+        if total_slices > 0:
+            progress_msg = f"Translating: 100% complete ({total_slices}/{total_slices} slices)"
+            print(progress_msg, file=sys.stderr)
+
+
 
 
 if __name__ == "__main__":
