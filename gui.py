@@ -370,6 +370,7 @@ class OllamaTranslatorGUI:
         file_path = filedialog.askopenfilename(
             title="Select file to translate",
             filetypes=[
+                ("All supported files", "*.txt *.md *.markdown *.html *.htm *.xhtml *.tex *.latex *.xml *.srt *.vtt"),
                 ("Text files", "*.txt"),
                 ("Markdown files", "*.md *.markdown"),
                 ("HTML files", "*.html *.htm *.xhtml"),
