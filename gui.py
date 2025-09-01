@@ -94,8 +94,10 @@ class OllamaTranslatorGUI:
         return {
             "ollama": {
                 "url": "http://localhost:11434/api/generate",
-                "model_name": "gemma3:latest",
+                "model_name": "qwen3:4b-instruct-2507-q8_0",
+                "num_beams": 5,
                 "temperature": 0.1,
+                "top_k": 20,
                 "top_p": 0.9,
                 "repeat_penalty": 1.2,
                 "timeout": 240,
@@ -182,104 +184,133 @@ class OllamaTranslatorGUI:
         
         # Ollama settings tab
         ollama_tab = notebook.add("Ollama Settings")
-        ollama_tab.grid_columnconfigure(1, weight=1)
-        ollama_tab.grid_rowconfigure(7, weight=1)  # Add empty row to push content to top
+        ollama_tab.grid_columnconfigure(0, weight=1)
+        ollama_tab.grid_rowconfigure(0, weight=1)
+        
+        # Create scrollable frame for Ollama settings
+        ollama_scrollable_frame = ctk.CTkScrollableFrame(ollama_tab)
+        ollama_scrollable_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        ollama_scrollable_frame.grid_columnconfigure(1, weight=1)
         
         # Ollama URL
-        url_label = ctk.CTkLabel(ollama_tab, text="Ollama URL:")
+        url_label = ctk.CTkLabel(ollama_scrollable_frame, text="Ollama URL:")
         url_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
         
-        self.url_entry = ctk.CTkEntry(ollama_tab)
+        self.url_entry = ctk.CTkEntry(ollama_scrollable_frame)
         self.url_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
         
         # Model name
-        model_label = ctk.CTkLabel(ollama_tab, text="Model Name:")
+        model_label = ctk.CTkLabel(ollama_scrollable_frame, text="Model Name:")
         model_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
         
-        self.model_entry = ctk.CTkEntry(ollama_tab)
+        self.model_entry = ctk.CTkEntry(ollama_scrollable_frame)
         self.model_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+
+        # Num Beams
+        num_beams_label = ctk.CTkLabel(ollama_scrollable_frame, text="Num Beams:")
+        num_beams_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        
+        self.num_beams_entry = ctk.CTkEntry(ollama_scrollable_frame)
+        self.num_beams_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
         
         # Temperature
-        temp_label = ctk.CTkLabel(ollama_tab, text="Temperature:")
-        temp_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        temp_label = ctk.CTkLabel(ollama_scrollable_frame, text="Temperature:")
+        temp_label.grid(row=3, column=0, padx=10, pady=5, sticky="w")
         
-        self.temp_entry = ctk.CTkEntry(ollama_tab)
-        self.temp_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
+        self.temp_entry = ctk.CTkEntry(ollama_scrollable_frame)
+        self.temp_entry.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
+
+        # Top K
+        top_k_label = ctk.CTkLabel(ollama_scrollable_frame, text="Top K:")
+        top_k_label.grid(row=4, column=0, padx=10, pady=5, sticky="w")
+        
+        self.top_k_entry = ctk.CTkEntry(ollama_scrollable_frame)
+        self.top_k_entry.grid(row=4, column=1, padx=10, pady=5, sticky="ew")
         
         # Top P
-        top_p_label = ctk.CTkLabel(ollama_tab, text="Top P:")
-        top_p_label.grid(row=3, column=0, padx=10, pady=5, sticky="w")
+        top_p_label = ctk.CTkLabel(ollama_scrollable_frame, text="Top P:")
+        top_p_label.grid(row=5, column=0, padx=10, pady=5, sticky="w")
         
-        self.top_p_entry = ctk.CTkEntry(ollama_tab)
-        self.top_p_entry.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
+        self.top_p_entry = ctk.CTkEntry(ollama_scrollable_frame)
+        self.top_p_entry.grid(row=5, column=1, padx=10, pady=5, sticky="ew")
         
         # Repeat penalty
-        repeat_label = ctk.CTkLabel(ollama_tab, text="Repeat Penalty:")
-        repeat_label.grid(row=4, column=0, padx=10, pady=5, sticky="w")
+        repeat_label = ctk.CTkLabel(ollama_scrollable_frame, text="Repeat Penalty:")
+        repeat_label.grid(row=6, column=0, padx=10, pady=5, sticky="w")
         
-        self.repeat_entry = ctk.CTkEntry(ollama_tab)
-        self.repeat_entry.grid(row=4, column=1, padx=10, pady=5, sticky="ew")
-        
-        # Timeout
-        timeout_label = ctk.CTkLabel(ollama_tab, text="Timeout (seconds):")
-        timeout_label.grid(row=5, column=0, padx=10, pady=5, sticky="w")
-        
-        self.timeout_entry = ctk.CTkEntry(ollama_tab)
-        self.timeout_entry.grid(row=5, column=1, padx=10, pady=5, sticky="ew")
-        
-        # Retries
-        retries_label = ctk.CTkLabel(ollama_tab, text="Retries:")
-        retries_label.grid(row=6, column=0, padx=10, pady=5, sticky="w")
-        
-        self.retries_entry = ctk.CTkEntry(ollama_tab)
-        self.retries_entry.grid(row=6, column=1, padx=10, pady=5, sticky="ew")
+        self.repeat_entry = ctk.CTkEntry(ollama_scrollable_frame)
+        self.repeat_entry.grid(row=6, column=1, padx=10, pady=5, sticky="ew")
         
         # Translation settings tab
         translation_tab = notebook.add("Translation Settings")
-        translation_tab.grid_columnconfigure(1, weight=1)
-        translation_tab.grid_rowconfigure(4, weight=1)  # Add empty row to push content to top
+        translation_tab.grid_columnconfigure(0, weight=1)
+        translation_tab.grid_rowconfigure(0, weight=1)
+        
+        # Create scrollable frame for Translation settings
+        translation_scrollable_frame = ctk.CTkScrollableFrame(translation_tab)
+        translation_scrollable_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        translation_scrollable_frame.grid_columnconfigure(1, weight=1)
         
         # Target language
-        lang_label = ctk.CTkLabel(translation_tab, text="Target Language:")
+        lang_label = ctk.CTkLabel(translation_scrollable_frame, text="Target Language:")
         lang_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
         
-        self.lang_entry = ctk.CTkEntry(translation_tab)
+        self.lang_entry = ctk.CTkEntry(translation_scrollable_frame)
         self.lang_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
         
         # Tokens per slice
-        tokens_label = ctk.CTkLabel(translation_tab, text="Tokens per Slice:")
+        tokens_label = ctk.CTkLabel(translation_scrollable_frame, text="Tokens per Slice:")
         tokens_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
         
-        self.tokens_entry = ctk.CTkEntry(translation_tab)
+        self.tokens_entry = ctk.CTkEntry(translation_scrollable_frame)
         self.tokens_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
         
         # Paragraph separator
-        sep_label = ctk.CTkLabel(translation_tab, text="Paragraph Separator:")
+        sep_label = ctk.CTkLabel(translation_scrollable_frame, text="Paragraph Separator:")
         sep_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
         
-        self.sep_entry = ctk.CTkEntry(translation_tab)
+        self.sep_entry = ctk.CTkEntry(translation_scrollable_frame)
         self.sep_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
         
         # System prompt
-        prompt_label = ctk.CTkLabel(translation_tab, text="System Prompt:")
+        prompt_label = ctk.CTkLabel(translation_scrollable_frame, text="System Prompt:")
         prompt_label.grid(row=3, column=0, padx=10, pady=5, sticky="nw")
         
-        self.prompt_text = ctk.CTkTextbox(translation_tab, height=100)
+        self.prompt_text = ctk.CTkTextbox(translation_scrollable_frame, height=100)
         self.prompt_text.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
         
         # General settings tab
         general_tab = notebook.add("General Settings")
         general_tab.grid_columnconfigure(0, weight=1)
-        general_tab.grid_rowconfigure(1, weight=1)  # Add empty row to push content to top
+        general_tab.grid_rowconfigure(0, weight=1)
+        
+        # Create scrollable frame for General settings
+        general_scrollable_frame = ctk.CTkScrollableFrame(general_tab)
+        general_scrollable_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        general_scrollable_frame.grid_columnconfigure(1, weight=1)
         
         # Skip connection test
         self.skip_test_var = ctk.BooleanVar()
         skip_test_check = ctk.CTkCheckBox(
-            general_tab, 
+            general_scrollable_frame, 
             text="Skip Connection Test", 
             variable=self.skip_test_var
         )
         skip_test_check.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        # Timeout
+        timeout_label = ctk.CTkLabel(general_scrollable_frame, text="Timeout (seconds):")
+        timeout_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        
+        self.timeout_entry = ctk.CTkEntry(general_scrollable_frame)
+        self.timeout_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+        
+        # Retries
+        retries_label = ctk.CTkLabel(general_scrollable_frame, text="Retries:")
+        retries_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        
+        self.retries_entry = ctk.CTkEntry(general_scrollable_frame)
+        self.retries_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
         
         # Progress and log area
         progress_frame = ctk.CTkFrame(self.root)
@@ -317,11 +348,11 @@ class OllamaTranslatorGUI:
         # Ollama settings
         self.url_entry.insert(0, self.settings["ollama"]["url"])
         self.model_entry.insert(0, self.settings["ollama"]["model_name"])
+        self.num_beams_entry.insert(0, str(self.settings["ollama"]["num_beams"]))
         self.temp_entry.insert(0, str(self.settings["ollama"]["temperature"]))
+        self.top_k_entry.insert(0, str(self.settings["ollama"]["top_k"]))
         self.top_p_entry.insert(0, str(self.settings["ollama"]["top_p"]))
         self.repeat_entry.insert(0, str(self.settings["ollama"]["repeat_penalty"]))
-        self.timeout_entry.insert(0, str(self.settings["ollama"]["timeout"]))
-        self.retries_entry.insert(0, str(self.settings["ollama"]["retries"]))
         
         # Translation settings
         self.lang_entry.insert(0, self.settings["translation"]["target_language"])
@@ -331,6 +362,8 @@ class OllamaTranslatorGUI:
         
         # General settings
         self.skip_test_var.set(self.settings["general"]["skip_connection_test"])
+        self.timeout_entry.insert(0, str(self.settings["general"]["timeout"]))
+        self.retries_entry.insert(0, str(self.settings["general"]["retries"]))
     
     def save_settings_from_ui(self):
         """
@@ -339,11 +372,11 @@ class OllamaTranslatorGUI:
         # Ollama settings
         self.settings["ollama"]["url"] = self.url_entry.get()
         self.settings["ollama"]["model_name"] = self.model_entry.get()
+        self.settings["ollama"]["num_beams"] = int(self.num_beams_entry.get())
         self.settings["ollama"]["temperature"] = float(self.temp_entry.get())
+        self.settings["ollama"]["top_k"] = int(self.top_k_entry.get())
         self.settings["ollama"]["top_p"] = float(self.top_p_entry.get())
         self.settings["ollama"]["repeat_penalty"] = float(self.repeat_entry.get())
-        self.settings["ollama"]["timeout"] = int(self.timeout_entry.get())
-        self.settings["ollama"]["retries"] = int(self.retries_entry.get())
         
         # Translation settings
         self.settings["translation"]["target_language"] = self.lang_entry.get()
@@ -353,6 +386,8 @@ class OllamaTranslatorGUI:
         
         # General settings
         self.settings["general"]["skip_connection_test"] = self.skip_test_var.get()
+        self.settings["general"]["timeout"] = int(self.timeout_entry.get())
+        self.settings["general"]["retries"] = int(self.retries_entry.get())
     
     def save_settings_to_file(self):
         """

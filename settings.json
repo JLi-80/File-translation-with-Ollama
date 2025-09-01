@@ -2,19 +2,21 @@
     "ollama": {
         "url": "http://localhost:11434/api/generate",
         "model_name": "qwen3:4b-instruct-2507-q8_0",
+        "num_beams": 5,
         "temperature": 0.1,
-        "top_p": 0.9,
-        "repeat_penalty": 1.2,
-        "timeout": 240,
-        "retries": 3
+        "top_k": 20,
+        "top_p": 0.5,
+        "repeat_penalty": 1.2
     },
     "translation": {
         "target_tokens_per_slice": 1024,
         "target_language": "simplified Chinese",
-        "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, including HTML/markdown/latex tags such as <table>, <figure>, <equation>, <reference>, etc. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+        "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, including HTML/markdown/latex tags such as <table>, <figure>, <equation>, <reference>, etc. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
         "para_sep": "<段落分隔符>"
     },
     "general": {
-        "skip_connection_test": false
+        "skip_connection_test": false,
+        "timeout": 240,
+        "retries": 3
     }
 }

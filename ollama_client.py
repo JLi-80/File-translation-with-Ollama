@@ -54,8 +54,10 @@ class OllamaClient:
         """
         self.url = config["url"]
         self.model_name = config["model_name"]
+        self.num_beams = config["num_beams"]
         self.temperature = config["temperature"]
         self.top_p = config["top_p"]
+        self.top_k = config["top_k"]
         self.repeat_penalty = config["repeat_penalty"]
         self.timeout = config["timeout"]
         self.retries = config["retries"]
@@ -77,7 +79,9 @@ class OllamaClient:
             "prompt": prompt,
             "stream": False,
             "options": {
+                "num_beams": self.num_beams,
                 "temperature": self.temperature,
+                "top_k": self.top_k,
                 "top_p": self.top_p,
                 "repeat_penalty": self.repeat_penalty
             },

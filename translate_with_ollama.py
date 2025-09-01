@@ -54,17 +54,31 @@ def load_settings():
                 if "translation" not in config:
                     config["translation"] = default_translation_settings
                 if "general" not in config:
-                    config["general"] = {"skip_connection_test": False}
+                    config["general"] = {
+                        "skip_connection_test": False, 
+                        "timeout": 240,
+                        "retries": 3}
+                
+                # 确保ollama配置包含timeout和retries参数
+                config["ollama"]["timeout"] = config["general"]["timeout"]
+                config["ollama"]["retries"] = config["general"]["retries"]
+                    
                 return config
         except (json.JSONDecodeError, IOError) as e:
             print(f"警告: 无法读取配置文件 {settings_path}: {e}", file=sys.stderr)
             print("使用默认配置", file=sys.stderr)
     
     # 默认配置
+    default_ollama_config = load_ollama_config(settings_path)
+    default_ollama_config["timeout"] = 240
+    default_ollama_config["retries"] = 3
+    
     return {
-        "ollama": load_ollama_config(settings_path),
+        "ollama": default_ollama_config,
         "translation": default_translation_settings,
-        "general": {"skip_connection_test": False}
+        "general": {"skip_connection_test": False,
+                    "timeout": 240, 
+                    "retries": 3}
     }
 
 def get_system_prompt():

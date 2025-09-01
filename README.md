@@ -44,8 +44,11 @@ The tool uses `settings.json` to manage configuration parameters. Key settings i
 ### Ollama Settings
 - `url`: Ollama API address (default: http://localhost:11434/api/generate)
 - `model_name`: Model name to use for translation
+- `num_beams`: Number of beams for beam search (higher = more accurate but slower)
 - `temperature`: Controls randomness of output (0.0-1.0)
-- `timeout`: Request timeout in seconds
+- `top_k`: Top-K sampling parameter (higher = more diverse outputs)
+- `top_p`: Top-P (nucleus) sampling parameter
+- `repeat_penalty`: Penalty for repeated tokens
 
 ### Translation Settings
 - `target_language`: Target language for translation (e.g., "English", "simplified Chinese")
@@ -53,6 +56,8 @@ The tool uses `settings.json` to manage configuration parameters. Key settings i
 
 ### General Settings
 - `skip_connection_test`: Skip Ollama connection test at startup
+- `timeout`: Request timeout in seconds
+- `retries`: Number of retries on failure
 
 ## Usage
 
@@ -121,4 +126,3 @@ To change the target language, modify the `target_language` parameter in `settin
     }
 }
 ```
-
