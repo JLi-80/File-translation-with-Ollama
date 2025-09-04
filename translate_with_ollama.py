@@ -34,7 +34,7 @@ from ollama_client import create_ollama_client, load_ollama_config, OllamaClient
 default_translation_settings={
     "target_tokens_per_slice": 1024,
     "target_language": "simplified Chinese",
-    "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, including HTML/markdown/latex tags such as <table>, <figure>, <equation>, <reference>, etc. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
+    "system_prompt": "You are a professional translator. Translate the following text into natural, fluent {target_language} if it's not already in {target_language}. DO NOT translate or remove any formating tags, including HTML/markdown/latex tags such as {para_sep}， <table>, <figure>, <equation>, <reference>, etc. DO NOT translate people names, acronyms, equations, hyperlinks, or references. Return ONLY the {target_language} translation, do not include any thinking/reasoning, explanation or note.",
     "para_sep": "<段落分隔符>"
 }
 
@@ -87,7 +87,8 @@ def get_system_prompt():
     """
     system_prompt = SETTINGS["translation"]["system_prompt"]
     target_language = SETTINGS["translation"]["target_language"]
-    return system_prompt.format(target_language=target_language)
+    para_sep = SETTINGS["translation"]["para_sep"]
+    return system_prompt.format(target_language=target_language, para_sep=para_sep)
 
 # 加载配置
 SETTINGS = load_settings()
